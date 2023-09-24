@@ -1,0 +1,12 @@
+apiVersion: workers.boundaryproject.io/v1alpha1
+kind: BoundaryPKIWorker
+metadata:
+  labels:
+    app.kubernetes.io/name: boundarypkiworker
+    app.kubernetes.io/instance: boundarypkiworker-sample
+    app.kubernetes.io/part-of: boundary-worker-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: boundary-worker-operator
+  name: boundarypkiworker-sample
+spec:
+  # TODO(user): Add fields here

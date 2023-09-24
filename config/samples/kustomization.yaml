@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- workers_v1alpha1_boundarypkiworker.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples
