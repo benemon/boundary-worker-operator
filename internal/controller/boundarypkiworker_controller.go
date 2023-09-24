@@ -38,6 +38,10 @@ import (
 	workersv1alpha1 "github.com/benemon/boundary-worker-operator/api/v1alpha1"
 )
 
+const (
+	boundaryPkiWorkerReplicas = 1
+)
+
 // Definitions to manage status conditions
 const (
 	// typeAvailableMemcached represents the status of the Deployment reconciliation
@@ -149,6 +153,16 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			// Let's return the error for the reconciliation be re-trigged again
 			return ctrl.Result{}, err
 		}
+		if *found.Spec.Replicas != int32(1) {
+			var replicas int32 = boundaryPkiWorkerReplicas
+			found.Spec.Replicas = &replicas
+			if err = r.Update(ctx, found); err != nil {
+				log.Error(err, "failed to update existing StatefulSet",
+					"StatefulSet.Namespace", found.Namespace, "StatefulSet.Name", found.Name)
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{RequeueAfter: time.Minute}, nil
+		}
 	}
 
 	return ctrl.Result{}, nil
@@ -157,7 +171,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*appsv1.StatefulSet, error) {
 	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
-	var replicas int32 = 1
+	var replicas int32 = boundaryPkiWorkerReplicas
 
 	// Get the Operand image
 	image, err := imageForBoundaryPKIWorker()
