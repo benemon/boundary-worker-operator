@@ -483,7 +483,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 						},
 							{
 								ContainerPort: 9203,
-								Name:          "metrics",
+								Name:          "ops",
 							}},
 						VolumeMounts: []corev1.VolumeMount{
 							{
