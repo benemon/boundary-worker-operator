@@ -117,20 +117,18 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 	}
 
-	// Check if the deployment already exists, if not create a new one
-	foundSS := &appsv1.StatefulSet{}
-	log.Info("checking if the statefulset already exists")
-	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundSS)
+	foundService := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundService)
 	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new deployment
-		statefulSet, err := r.statefulsetForBoundaryPKIWorker(boundaryPkiWorker)
+		// Define a new Service
+		service, err := r.serviceForBoundaryPKIWorker(boundaryPkiWorker)
 		if err != nil {
-			log.Error(err, "failed to define new StatefulSet resource for BoundaryPKIWorker")
+			log.Error(err, "failed to define new ConfigMap resource for BoundaryPKIWorker")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
 				Status: metav1.ConditionFalse, Reason: "reconciling",
-				Message: fmt.Sprintf("failed to create StatefulSet for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+				Message: fmt.Sprintf("failed to create Service for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
 
 			if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
 				log.Error(err, "failed to update BoundaryPKIWorker status")
@@ -139,22 +137,21 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 			return ctrl.Result{}, err
 		}
-
-		log.Info("creating a new StatefulSet",
-			"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
-		if err = r.Create(ctx, statefulSet); err != nil {
-			log.Error(err, "failed to create new StatefulSet",
-				"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
+		log.Info("creating a new Service",
+			"Service.Namespace", service.Namespace, "Service.Name", service.Name)
+		if err = r.Create(ctx, service); err != nil {
+			log.Error(err, "failed to create new Service",
+				"Service.Namespace", service.Namespace, "Service.Name", service.Name)
 			return ctrl.Result{}, err
 		}
 
-		// Deployment created successfully
+		// ConfigMap created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
-		log.Info("completed StatefulSet reconciliation block")
+		log.Info("completed Service reconciliation block")
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
-		log.Error(err, "failed to get StatefulSet")
+		log.Error(err, "failed to get Service")
 		// Let's return the error for the reconciliation be re-trigged again
 		return ctrl.Result{}, err
 	}
@@ -198,18 +195,20 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	foundService := &corev1.Service{}
-	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundService)
+	// Check if the deployment already exists, if not create a new one
+	foundSS := &appsv1.StatefulSet{}
+	log.Info("checking if the statefulset already exists")
+	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundSS)
 	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new Service
-		service, err := r.serviceForBoundaryPKIWorker(boundaryPkiWorker)
+		// Define a new deployment
+		statefulSet, err := r.statefulsetForBoundaryPKIWorker(boundaryPkiWorker)
 		if err != nil {
-			log.Error(err, "failed to define new ConfigMap resource for BoundaryPKIWorker")
+			log.Error(err, "failed to define new StatefulSet resource for BoundaryPKIWorker")
 
 			// The following implementation will update the status
 			meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
 				Status: metav1.ConditionFalse, Reason: "reconciling",
-				Message: fmt.Sprintf("failed to create Service for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+				Message: fmt.Sprintf("failed to create StatefulSet for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
 
 			if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
 				log.Error(err, "failed to update BoundaryPKIWorker status")
@@ -218,21 +217,22 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 			return ctrl.Result{}, err
 		}
-		log.Info("creating a new Service",
-			"Service.Namespace", service.Namespace, "Service.Name", service.Name)
-		if err = r.Create(ctx, service); err != nil {
-			log.Error(err, "failed to create new Service",
-				"Service.Namespace", service.Namespace, "Service.Name", service.Name)
+
+		log.Info("creating a new StatefulSet",
+			"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
+		if err = r.Create(ctx, statefulSet); err != nil {
+			log.Error(err, "failed to create new StatefulSet",
+				"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
 			return ctrl.Result{}, err
 		}
 
-		// ConfigMap created successfully
+		// Deployment created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
-		log.Info("completed Service reconciliation block")
+		log.Info("completed StatefulSet reconciliation block")
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
-		log.Error(err, "failed to get Service")
+		log.Error(err, "failed to get StatefulSet")
 		// Let's return the error for the reconciliation be re-trigged again
 		return ctrl.Result{}, err
 	}
