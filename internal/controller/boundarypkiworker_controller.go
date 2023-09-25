@@ -157,7 +157,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	foundCM := &corev1.ConfigMap{}
-	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundCM)
+	err = r.Get(ctx, types.NamespacedName{Name: fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name), Namespace: boundaryPkiWorker.Namespace}, foundCM)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new configmap
 		configMap, err := r.configMapForBoundaryPKIWorker(boundaryPkiWorker)
@@ -277,7 +277,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// The following implementation will update the status
 	meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
 		Status: metav1.ConditionTrue, Reason: "reconciling",
-		Message: fmt.Sprintf("StatefulSet for custom resource (%s) created successfully in namespace (%s)", boundaryPkiWorker.Name, boundaryPkiWorker.Namespace)})
+		Message: fmt.Sprintf("Resources for custom resource (%s) created successfully in namespace (%s)", boundaryPkiWorker.Name, boundaryPkiWorker.Namespace)})
 
 	if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
 		log.Error(err, "failed to update BoundaryPKIWorker status")
