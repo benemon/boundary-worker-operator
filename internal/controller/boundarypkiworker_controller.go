@@ -488,11 +488,11 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 							}},
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      "boundary-worker-config-volume",
+								Name:      fmt.Sprintf("%s-configuration-volume", boundaryPkiWorker.Name),
 								MountPath: "/opt/boundary/config/",
 							},
 							{
-								Name:      "boundary-worker-storage-volume",
+								Name:      fmt.Sprintf("%s-storage-volume", boundaryPkiWorker.Name),
 								MountPath: "/opt/boundary/data/",
 							},
 						},
