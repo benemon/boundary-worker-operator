@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,12 +118,12 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// Check if the deployment already exists, if not create a new one
-	found := &appsv1.StatefulSet{}
+	foundSS := &appsv1.StatefulSet{}
 	log.Info("checking if the statefulset already exists")
-	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, found)
+	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundSS)
 	if err != nil && apierrors.IsNotFound(err) {
 		// Define a new deployment
-		dep, err := r.statefulsetForBoundaryPKIWorker(boundaryPkiWorker)
+		statefulSet, err := r.statefulsetForBoundaryPKIWorker(boundaryPkiWorker)
 		if err != nil {
 			log.Error(err, "failed to define new StatefulSet resource for BoundaryPKIWorker")
 
@@ -140,17 +141,17 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		log.Info("creating a new StatefulSet",
-			"StatefulSet.Namespace", dep.Namespace, "StatefulSet.Name", dep.Name)
-		if err = r.Create(ctx, dep); err != nil {
+			"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
+		if err = r.Create(ctx, statefulSet); err != nil {
 			log.Error(err, "failed to create new StatefulSet",
-				"StatefulSet.Namespace", dep.Namespace, "StatefulSet.Name", dep.Name)
+				"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
 			return ctrl.Result{}, err
 		}
 
 		// Deployment created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
-		log.Info("completed statefulset reconciliation block")
+		log.Info("completed StatefulSet reconciliation block")
 		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	} else if err != nil {
 		log.Error(err, "failed to get StatefulSet")
@@ -158,21 +159,99 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
+	foundCM := &corev1.ConfigMap{}
+	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundCM)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Define a new configmap
+		configMap, err := r.configMapForBoundaryPKIWorker(boundaryPkiWorker)
+		if err != nil {
+			log.Error(err, "failed to define new ConfigMap resource for BoundaryPKIWorker")
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
+				Status: metav1.ConditionFalse, Reason: "reconciling",
+				Message: fmt.Sprintf("failed to create ConfigMap for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+
+			if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
+				log.Error(err, "failed to update BoundaryPKIWorker status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+		log.Info("creating a new ConfigMap",
+			"ConfigMap.Namespace", configMap.Namespace, "ConfigMap.Name", configMap.Name)
+		if err = r.Create(ctx, configMap); err != nil {
+			log.Error(err, "failed to create new ConfigMap",
+				"ConfigMap.Namespace", configMap.Namespace, "ConfigMap.Name", configMap.Name)
+			return ctrl.Result{}, err
+		}
+
+		// ConfigMap created successfully
+		// We will requeue the reconciliation so that we can ensure the state
+		// and move forward for the next operations
+		log.Info("completed ConfigMap reconciliation block")
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	} else if err != nil {
+		log.Error(err, "failed to get ConfigMap")
+		// Let's return the error for the reconciliation be re-trigged again
+		return ctrl.Result{}, err
+	}
+
+	foundService := &corev1.Service{}
+	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundService)
+	if err != nil && apierrors.IsNotFound(err) {
+		// Define a new Service
+		service, err := r.serviceForBoundaryPKIWorker(boundaryPkiWorker)
+		if err != nil {
+			log.Error(err, "failed to define new ConfigMap resource for BoundaryPKIWorker")
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
+				Status: metav1.ConditionFalse, Reason: "reconciling",
+				Message: fmt.Sprintf("failed to create Service for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+
+			if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
+				log.Error(err, "failed to update BoundaryPKIWorker status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+		log.Info("creating a new Service",
+			"Service.Namespace", service.Namespace, "Service.Name", service.Name)
+		if err = r.Create(ctx, service); err != nil {
+			log.Error(err, "failed to create new Service",
+				"Service.Namespace", service.Namespace, "Service.Name", service.Name)
+			return ctrl.Result{}, err
+		}
+
+		// ConfigMap created successfully
+		// We will requeue the reconciliation so that we can ensure the state
+		// and move forward for the next operations
+		log.Info("completed Service reconciliation block")
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
+	} else if err != nil {
+		log.Error(err, "failed to get Service")
+		// Let's return the error for the reconciliation be re-trigged again
+		return ctrl.Result{}, err
+	}
+
 	var replicas int32 = boundaryPkiWorkerReplicas
-	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, &found.Spec.Replicas))
+	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, foundSS.Spec.Replicas))
 	log.Info("checking if the statefulset has the correct number of replicas")
-	if *found.Spec.Replicas != replicas {
-		found.Spec.Replicas = &replicas
-		if err = r.Update(ctx, found); err != nil {
-			log.Error(err, "Failed to update StatefulSet",
-				"StatefulSet.Namespace", found.Namespace, "StatefulSet.Name", found.Name)
+	if *foundSS.Spec.Replicas != replicas {
+		foundSS.Spec.Replicas = &replicas
+		if err = r.Update(ctx, foundSS); err != nil {
+			log.Error(err, "failed to update StatefulSet",
+				"StatefulSet.Namespace", foundSS.Namespace, "StatefulSet.Name", foundSS.Name)
 
 			// Re-fetch the Custom Resource before update the status
 			// so that we have the latest state of the resource on the cluster and we will avoid
 			// raise the issue "the object has been modified, please apply
 			// your changes to the latest version and try again" which would re-trigger the reconciliation
 			if err := r.Get(ctx, req.NamespacedName, boundaryPkiWorker); err != nil {
-				log.Error(err, "Failed to re-fetch boundaryPkiWorker")
+				log.Error(err, "failed to re-fetch boundaryPkiWorker")
 				return ctrl.Result{}, err
 			}
 
@@ -209,6 +288,97 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return ctrl.Result{}, nil
 }
 
+func (r *BoundaryPKIWorkerReconciler) serviceForBoundaryPKIWorker(
+	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.Service, error) {
+
+	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      boundaryPkiWorker.Name,
+			Namespace: boundaryPkiWorker.Namespace,
+			Labels:    ls,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name: "proxy",
+					Port: 9202,
+				},
+				{
+					Name: "ops",
+					Port: 9203,
+				},
+			},
+			ClusterIP: corev1.ClusterIPNone,
+			Selector:  ls,
+		},
+	}
+	// Set the ownerRef for the Service
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
+	if err := ctrl.SetControllerReference(boundaryPkiWorker, service, r.Scheme); err != nil {
+		return nil, err
+	}
+	return service, nil
+}
+
+func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
+	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ConfigMap, error) {
+
+	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
+	cmData := make(map[string]string)
+	cmData["worker.hcl"] = r.configMapData(boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID, boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken, boundaryPkiWorker)
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
+			Namespace: boundaryPkiWorker.Namespace,
+			Labels:    ls,
+		},
+		Data: cmData,
+	}
+
+	// Set the ownerRef for the ConfigMap
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
+	if err := ctrl.SetControllerReference(boundaryPkiWorker, cm, r.Scheme); err != nil {
+		return nil, err
+	}
+	return cm, nil
+}
+
+func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string, controllerGeneratedActivationToken string, boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
+	var sb strings.Builder
+
+	sb.WriteString("disable_mlock = true")
+	sb.WriteString(fmt.Sprintf("hcp_boundary_cluster_id=\"%s\"", hcpBoundaryClusterId))
+	sb.WriteString("listener \"tcp\" {")
+	sb.WriteString("	address = \"0.0.0.0:9202\"")
+	sb.WriteString("  	purpose = \"proxy\"")
+	sb.WriteString("}")
+	sb.WriteString("\n")
+	sb.WriteString("listener \"tcp\" {")
+	sb.WriteString("	address = \"0.0.0.0:9202\"")
+	sb.WriteString("  	purpose = \"proxy\"")
+	sb.WriteString("}")
+	sb.WriteString("\n")
+	sb.WriteString("listener \"tcp\" {")
+	sb.WriteString("	address = \"0.0.0.0:9203\"")
+	sb.WriteString("  	purpose = \"ops\"")
+	sb.WriteString("    tls_disable = true")
+	sb.WriteString("}")
+	sb.WriteString("\n")
+	sb.WriteString("worker {")
+	sb.WriteString(fmt.Sprintf("	controller_generated_activation_token =\"%s\"", controllerGeneratedActivationToken))
+	sb.WriteString("	auth_storage_path = \"/opt/boundary/data\"")
+	sb.WriteString("	tags {")
+	sb.WriteString("    	type = [\"kubernetes\"]")
+	sb.WriteString(fmt.Sprintf("		namespace =[\"%s\"]", boundaryPkiWorker.Namespace))
+	sb.WriteString(fmt.Sprintf("		boundary_pki_worker =[\"%s\"]", boundaryPkiWorker.Name))
+	sb.WriteString("	}")
+	sb.WriteString("}")
+
+	return sb.String()
+}
+
 func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*appsv1.StatefulSet, error) {
 	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
@@ -220,6 +390,8 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 		return nil, err
 	}
 
+	storageClassName := boundaryPkiWorker.Spec.Storage.StorageClassName
+
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      boundaryPkiWorker.Name,
@@ -230,39 +402,29 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "boundary-worker-storage",
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						StorageClassName: &storageClassName,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: resource.MustParse("256Mi"),
+							},
+						},
+					},
+				},
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					// TODO(user): Uncomment the following code to configure the nodeAffinity expression
-					// according to the platforms which are supported by your solution. It is considered
-					// best practice to support multiple architectures. build your manager image using the
-					// makefile target docker-buildx. Also, you can use docker manifest inspect <image>
-					// to check what are the platforms supported.
-					// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-					//Affinity: &corev1.Affinity{
-					//	NodeAffinity: &corev1.NodeAffinity{
-					//		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					//			NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					//				{
-					//					MatchExpressions: []corev1.NodeSelectorRequirement{
-					//						{
-					//							Key:      "kubernetes.io/arch",
-					//							Operator: "In",
-					//							Values:   []string{"amd64", "arm64", "ppc64le", "s390x"},
-					//						},
-					//						{
-					//							Key:      "kubernetes.io/os",
-					//							Operator: "In",
-					//							Values:   []string{"linux"},
-					//						},
-					//					},
-					//				},
-					//			},
-					//		},
-					//	},
-					//},
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsNonRoot: &[]bool{true}[0],
 						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
@@ -272,9 +434,27 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
 					},
+					Volumes: []corev1.Volume{{
+						Name: "boundary-worker-config-volume",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
+								},
+							},
+						},
+					}, {
+						Name: "boundary-worker-storage-volume",
+						VolumeSource: corev1.VolumeSource{
+							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+								ClaimName: "boundary-worker-storage",
+							},
+						},
+					},
+					},
 					Containers: []corev1.Container{{
 						Image:           image,
-						Name:            "boundary-enterprise",
+						Name:            "boundary-worker",
 						ImagePullPolicy: corev1.PullAlways,
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
@@ -305,13 +485,23 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 								ContainerPort: 9203,
 								Name:          "metrics",
 							}},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "boundary-worker-config-volume",
+								MountPath: "/opt/boundary/config/",
+							},
+							{
+								Name:      "boundary-worker-storage-volume",
+								MountPath: "/opt/boundary/data/",
+							},
+						},
 					}},
 				},
 			},
 		},
 	}
 
-	// Set the ownerRef for the Deployment
+	// Set the ownerRef for the StatefulSet
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 	if err := ctrl.SetControllerReference(boundaryPkiWorker, ss, r.Scheme); err != nil {
 		return nil, err

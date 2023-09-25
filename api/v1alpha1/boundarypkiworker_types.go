@@ -27,7 +27,15 @@ import (
 type BoundaryPKIWorkerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	Registration BoundaryPKIWorkerRegistrationSpec `json:"registration"`
+	Storage      BoundaryPKIWorkerStorageSpec      `json:"storage,omitempty"`
+}
 
+type BoundaryPKIWorkerStorageSpec struct {
+	StorageClassName string `json:"storageClassName,omitempty"`
+}
+
+type BoundaryPKIWorkerRegistrationSpec struct {
 	// HCPBoundaryClusterID accepts a Boundary cluster id and will be used by a worker when initially connecting to HCP Boundary. Your cluster id is the UUID in the controller url.
 	HCPBoundaryClusterID string `json:"hcpBoundaryClusterID,omitempty"`
 	// ControllerGeneratedActivationToken is the token retrieved by the administrator from Boundary. Once the worker starts, it reads this token and uses it to authorize to the cluster. Note that this token is one-time-use; it is safe to keep it here even after the worker has successfully authorized and authenticated, as it will be unusable at that point.
