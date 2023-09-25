@@ -390,8 +390,6 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 		return nil, err
 	}
 
-	storageClassName := boundaryPkiWorker.Spec.Storage.StorageClassName
-
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      boundaryPkiWorker.Name,
@@ -407,17 +405,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 					ObjectMeta: metav1.ObjectMeta{
 						Name: fmt.Sprintf("%s-storage", boundaryPkiWorker.Name),
 					},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{
-							corev1.ReadWriteOnce,
-						},
-						StorageClassName: &storageClassName,
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("256Mi"),
-							},
-						},
-					},
+					Spec: volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorker.Name, boundaryPkiWorker.Spec.Storage.StorageClassName),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
@@ -508,6 +496,38 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 		return nil, err
 	}
 	return ss, nil
+}
+
+func volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorkerName string, storageClassName string) corev1.PersistentVolumeClaimSpec {
+	if storageClassName != "" {
+		pvct := corev1.PersistentVolumeClaimSpec{
+
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			StorageClassName: &storageClassName,
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("256Mi"),
+				},
+			},
+		}
+		return pvct
+	} else {
+		pvct := corev1.PersistentVolumeClaimSpec{
+
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			// default storage class
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: resource.MustParse("256Mi"),
+				},
+			},
+		}
+		return pvct
+	}
 }
 
 // labelsForMemcached returns the labels for selecting the resources
