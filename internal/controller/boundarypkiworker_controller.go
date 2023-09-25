@@ -149,6 +149,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			// Deployment created successfully
 			// We will requeue the reconciliation so that we can ensure the state
 			// and move forward for the next operations
+			log.Info("completed statefulset reconciliation block")
 			return ctrl.Result{RequeueAfter: time.Minute}, nil
 		} else if err != nil {
 			log.Error(err, "failed to get StatefulSet")
@@ -157,7 +158,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		var replicas int32 = boundaryPkiWorkerReplicas
-		log.Info("checking if the statefulset has the correct number of repliacs")
+		log.Info("checking if the statefulset has the correct number of replicas")
 		if *found.Spec.Replicas != replicas {
 			found.Spec.Replicas = &replicas
 			if err = r.Update(ctx, found); err != nil {
@@ -175,25 +176,35 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 				// The following implementation will update the status
 				meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
-					Status: metav1.ConditionFalse, Reason: "Resizing",
-					Message: fmt.Sprintf("Failed to update the replicas for the owned resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+					Status: metav1.ConditionFalse, Reason: "resizing",
+					Message: fmt.Sprintf("failed to update the replicas for the owned resource (%s): (%s)", boundaryPkiWorker.Name, err)})
 
 				if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
-					log.Error(err, "Failed to update BoundaryPkiWorker status")
+					log.Error(err, "failed to update BoundaryPkiWorker status")
 					return ctrl.Result{}, err
 				}
-
+				log.Info("set replicas succesfully")
 				return ctrl.Result{}, err
 			}
 
 			// Now, that we update the size we want to requeue the reconciliation
 			// so that we can ensure that we have the latest state of the resource before
 			// update. Also, it will help ensure the desired state on the cluster
-			log.Info("reconciliation complete. requeuing")
+			log.Info("completed replica reconciliation block")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
+	// The following implementation will update the status
+	meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
+		Status: metav1.ConditionTrue, Reason: "reconciling",
+		Message: fmt.Sprintf("StatefulSet for custom resource (%s) created successfully in namespace (%s)", boundaryPkiWorker.Name, boundaryPkiWorker.Namespace)})
 
+	if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
+		log.Error(err, "failed to update BoundaryPKIWorker status")
+		return ctrl.Result{}, err
+	}
+
+	log.Info("end of reconciliation block")
 	return ctrl.Result{}, nil
 }
 
