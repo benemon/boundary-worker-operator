@@ -159,7 +159,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	var replicas int32 = boundaryPkiWorkerReplicas
-	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, found.Spec.Replicas))
+	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, &found.Spec.Replicas))
 	log.Info("checking if the statefulset has the correct number of replicas")
 	if *found.Spec.Replicas != replicas {
 		found.Spec.Replicas = &replicas
