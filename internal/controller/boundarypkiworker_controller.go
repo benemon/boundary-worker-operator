@@ -78,13 +78,14 @@ type BoundaryPKIWorkerReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
-
+	log.Info("starting reconciliation loop")
 	// Fetch the Memcached instance
 	// The purpose is check if the Custom Resource for the Kind Memcached
 	// is applied on the cluster if not we return nil to stop the reconciliation
 	boundaryPkiWorker := &workersv1alpha1.BoundaryPKIWorker{}
 	err := r.Get(ctx, req.NamespacedName, boundaryPkiWorker)
 	if err != nil {
+		log.Info("No CR")
 		if apierrors.IsNotFound(err) {
 			// If the custom resource is not found then, it usually means that it was deleted or not created
 			// In this way, we will stop the reconciliation
@@ -116,6 +117,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 		// Check if the deployment already exists, if not create a new one
 		found := &appsv1.StatefulSet{}
+		log.Info("checking if the statefulset already exists")
 		err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, found)
 		if err != nil && apierrors.IsNotFound(err) {
 			// Define a new deployment
@@ -155,18 +157,19 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		var replicas int32 = boundaryPkiWorkerReplicas
+		log.Info("checking if the statefulset has the correct number of repliacs")
 		if *found.Spec.Replicas != replicas {
 			found.Spec.Replicas = &replicas
 			if err = r.Update(ctx, found); err != nil {
 				log.Error(err, "Failed to update StatefulSet",
 					"StatefulSet.Namespace", found.Namespace, "StatefulSet.Name", found.Name)
 
-				// Re-fetch the memcached Custom Resource before update the status
+				// Re-fetch the Custom Resource before update the status
 				// so that we have the latest state of the resource on the cluster and we will avoid
 				// raise the issue "the object has been modified, please apply
 				// your changes to the latest version and try again" which would re-trigger the reconciliation
 				if err := r.Get(ctx, req.NamespacedName, boundaryPkiWorker); err != nil {
-					log.Error(err, "Failed to re-fetch memcached")
+					log.Error(err, "Failed to re-fetch boundaryPkiWorker")
 					return ctrl.Result{}, err
 				}
 
@@ -186,6 +189,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			// Now, that we update the size we want to requeue the reconciliation
 			// so that we can ensure that we have the latest state of the resource before
 			// update. Also, it will help ensure the desired state on the cluster
+			log.Info("reconciliation complete. requeuing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
