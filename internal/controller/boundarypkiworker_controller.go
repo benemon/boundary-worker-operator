@@ -408,6 +408,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 					Spec: volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorker.Name, boundaryPkiWorker.Spec.Storage.StorageClassName),
 				},
 			},
+			ServiceName: boundaryPkiWorker.Name,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: ls,
