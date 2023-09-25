@@ -403,7 +403,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("%s-storage", boundaryPkiWorker.Name),
+						Name: fmt.Sprintf("%s-storage-volume", boundaryPkiWorker.Name),
 					},
 					Spec: volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorker.Name, boundaryPkiWorker.Spec.Storage.StorageClassName),
 				},
@@ -429,13 +429,6 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 								LocalObjectReference: corev1.LocalObjectReference{
 									Name: fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
 								},
-							},
-						},
-					}, {
-						Name: fmt.Sprintf("%s-storage-volume", boundaryPkiWorker.Name),
-						VolumeSource: corev1.VolumeSource{
-							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: fmt.Sprintf("%s-storage", boundaryPkiWorker.Name),
 							},
 						},
 					},
