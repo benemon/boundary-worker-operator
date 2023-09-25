@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/benjamin_holmes/boundary-worker-operator
-  newTag: 0.0.1
+  newTag: main
