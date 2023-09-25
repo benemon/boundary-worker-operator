@@ -19,15 +19,12 @@ package controller
 import (
 	"context"
 	"fmt"
-	"os"
-	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,10 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	workersv1alpha1 "github.com/benemon/boundary-worker-operator/api/v1alpha1"
-)
-
-const (
-	boundaryPkiWorkerReplicas = 1
 )
 
 // Definitions to manage status conditions
@@ -237,6 +230,8 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
+	// TODO Implement checks for cluster id changes and token changes
+
 	var replicas int32 = boundaryPkiWorkerReplicas
 	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, foundSS.Spec.Replicas))
 	log.Info("checking if the statefulset has the correct number of replicas")
@@ -286,285 +281,6 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	log.Info("end of reconciliation block")
 	return ctrl.Result{}, nil
-}
-
-func (r *BoundaryPKIWorkerReconciler) serviceForBoundaryPKIWorker(
-	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.Service, error) {
-
-	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      boundaryPkiWorker.Name,
-			Namespace: boundaryPkiWorker.Namespace,
-			Labels:    ls,
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name: "proxy",
-					Port: 9202,
-				},
-				{
-					Name: "ops",
-					Port: 9203,
-				},
-			},
-			ClusterIP: corev1.ClusterIPNone,
-			Selector:  ls,
-		},
-	}
-	// Set the ownerRef for the Service
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(boundaryPkiWorker, service, r.Scheme); err != nil {
-		return nil, err
-	}
-	return service, nil
-}
-
-func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
-	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ConfigMap, error) {
-
-	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
-	cmData := make(map[string]string)
-	cmData["worker.hcl"] = r.configMapData(boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID, boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken, boundaryPkiWorker)
-
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
-			Namespace: boundaryPkiWorker.Namespace,
-			Labels:    ls,
-		},
-		Data: cmData,
-	}
-
-	// Set the ownerRef for the ConfigMap
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(boundaryPkiWorker, cm, r.Scheme); err != nil {
-		return nil, err
-	}
-	return cm, nil
-}
-
-func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string, controllerGeneratedActivationToken string, boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
-	var sb strings.Builder
-
-	sb.WriteString("disable_mlock = true")
-	sb.WriteString("\n")
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("hcp_boundary_cluster_id= \"%s\"", hcpBoundaryClusterId))
-	sb.WriteString("\n")
-	sb.WriteString("\n")
-	sb.WriteString("listener \"tcp\" {")
-	sb.WriteString("\n")
-	sb.WriteString("	address = \"0.0.0.0:9202\"")
-	sb.WriteString("\n")
-	sb.WriteString("  	purpose = \"proxy\"")
-	sb.WriteString("\n")
-	sb.WriteString("}")
-	sb.WriteString("\n")
-	sb.WriteString("\n")
-	sb.WriteString("listener \"tcp\" {")
-	sb.WriteString("\n")
-	sb.WriteString("	address = \"0.0.0.0:9203\"")
-	sb.WriteString("\n")
-	sb.WriteString("  	purpose = \"ops\"")
-	sb.WriteString("\n")
-	sb.WriteString("    tls_disable = true")
-	sb.WriteString("\n")
-	sb.WriteString("}")
-	sb.WriteString("\n")
-	sb.WriteString("\n")
-	sb.WriteString("worker {")
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("	controller_generated_activation_token = \"%s\"", controllerGeneratedActivationToken))
-	sb.WriteString("\n")
-	sb.WriteString("	auth_storage_path = \"/opt/boundary/data\"")
-	sb.WriteString("\n")
-	sb.WriteString("	tags {")
-	sb.WriteString("\n")
-	sb.WriteString("    		type = [\"kubernetes\"]")
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("	namespace = [\"%s\"]", boundaryPkiWorker.Namespace))
-	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("	boundary_pki_worker = [\"%s\"]", boundaryPkiWorker.Name))
-	sb.WriteString("\n")
-	sb.WriteString("	}")
-	sb.WriteString("\n")
-	sb.WriteString("}")
-
-	return sb.String()
-}
-
-func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
-	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*appsv1.StatefulSet, error) {
-	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
-	var replicas int32 = boundaryPkiWorkerReplicas
-
-	// Get the Operand image
-	image, err := imageForBoundaryPKIWorker()
-	if err != nil {
-		return nil, err
-	}
-
-	ss := &appsv1.StatefulSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      boundaryPkiWorker.Name,
-			Namespace: boundaryPkiWorker.Namespace,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: &replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: fmt.Sprintf("%s-storage-volume", boundaryPkiWorker.Name),
-					},
-					Spec: volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorker.Name, boundaryPkiWorker.Spec.Storage.StorageClassName),
-				},
-			},
-			ServiceName: boundaryPkiWorker.Name,
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
-				},
-				Spec: corev1.PodSpec{
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{true}[0],
-						// IMPORTANT: seccomProfile was introduced with Kubernetes 1.19
-						// If you are looking for to produce solutions to be supported
-						// on lower versions you must remove this option.
-						SeccompProfile: &corev1.SeccompProfile{
-							Type: corev1.SeccompProfileTypeRuntimeDefault,
-						},
-					},
-					Volumes: []corev1.Volume{{
-						Name: fmt.Sprintf("%s-configuration-volume", boundaryPkiWorker.Name),
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
-								},
-							},
-						},
-					},
-					},
-					Containers: []corev1.Container{{
-						Image:           image,
-						Name:            "boundary-worker",
-						ImagePullPolicy: corev1.PullAlways,
-						// Ensure restrictive context for the container
-						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
-						SecurityContext: &corev1.SecurityContext{
-							// WARNING: Ensure that the image used defines an UserID in the Dockerfile
-							// otherwise the Pod will not run and will fail with "container has runAsNonRoot and image has non-numeric user"".
-							// If you want your workloads admitted in namespaces enforced with the restricted mode in OpenShift/OKD vendors
-							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the "RunAsNonRoot" and
-							// "RunAsUser" fields empty.
-							RunAsNonRoot: &[]bool{true}[0],
-							// The memcached image does not use a non-zero numeric user as the default user.
-							// Due to RunAsNonRoot field being set to true, we need to force the user in the
-							// container to a non-zero numeric user. We do this using the RunAsUser field.
-							// However, if you are looking to provide solution for K8s vendors like OpenShift
-							// be aware that you cannot run under its restricted-v2 SCC if you set this value.
-							AllowPrivilegeEscalation: &[]bool{false}[0],
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{
-									"ALL",
-								},
-							},
-						},
-						Ports: []corev1.ContainerPort{
-							{
-								ContainerPort: 9202,
-								Name:          "proxy",
-							},
-							{
-								ContainerPort: 9203,
-								Name:          "ops",
-							}},
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      fmt.Sprintf("%s-configuration-volume", boundaryPkiWorker.Name),
-								MountPath: "/opt/boundary/config/",
-							},
-							{
-								Name:      fmt.Sprintf("%s-storage-volume", boundaryPkiWorker.Name),
-								MountPath: "/opt/boundary/data/",
-							},
-						},
-					}},
-				},
-			},
-		},
-	}
-
-	// Set the ownerRef for the StatefulSet
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(boundaryPkiWorker, ss, r.Scheme); err != nil {
-		return nil, err
-	}
-	return ss, nil
-}
-
-func volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorkerName string, storageClassName string) corev1.PersistentVolumeClaimSpec {
-	if storageClassName != "" {
-		pvct := corev1.PersistentVolumeClaimSpec{
-
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			},
-			StorageClassName: &storageClassName,
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse("256Mi"),
-				},
-			},
-		}
-		return pvct
-	} else {
-		pvct := corev1.PersistentVolumeClaimSpec{
-
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			},
-			// default storage class
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: resource.MustParse("256Mi"),
-				},
-			},
-		}
-		return pvct
-	}
-}
-
-// labelsForMemcached returns the labels for selecting the resources
-// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
-func labelsForBoundaryPKIWorker(name string) map[string]string {
-	var imageTag string
-	image, err := imageForBoundaryPKIWorker()
-	if err == nil {
-		imageTag = strings.Split(image, ":")[1]
-	}
-	return map[string]string{"app.kubernetes.io/name": "BoundaryPKIWorker",
-		"app.kubernetes.io/instance":   name,
-		"app.kubernetes.io/version":    imageTag,
-		"app.kubernetes.io/part-of":    "boundary-worker-operator",
-		"app.kubernetes.io/created-by": "controller-manager",
-	}
-}
-
-// imageForMemcached gets the Operand image which is managed by this controller
-// from the MEMCACHED_IMAGE environment variable defined in the config/manager/manager.yaml
-func imageForBoundaryPKIWorker() (string, error) {
-	var imageEnvVar = "BOUNDARY_WORKER_IMAGE"
-	image, found := os.LookupEnv(imageEnvVar)
-	if !found {
-		return "", fmt.Errorf("unable to find %s environment variable with the image", imageEnvVar)
-	}
-	return image, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

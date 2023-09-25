@@ -25,13 +25,17 @@ import (
 
 // BoundaryPKIWorkerSpec defines the desired state of BoundaryPKIWorker
 type BoundaryPKIWorkerSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+
+	// The Registration block containing configurations required to register this Boundary Worker with its cluster
 	Registration BoundaryPKIWorkerRegistrationSpec `json:"registration"`
-	Storage      BoundaryPKIWorkerStorageSpec      `json:"storage,omitempty"`
+
+	// The Storage block containing the Boundary Worker storage configuration
+	Storage BoundaryPKIWorkerStorageSpec `json:"storage,omitempty"`
 }
 
 type BoundaryPKIWorkerStorageSpec struct {
+
+	// StorageClass to use. Will use default storage class if omitted
 	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
@@ -44,8 +48,6 @@ type BoundaryPKIWorkerRegistrationSpec struct {
 
 // BoundaryPKIWorkerStatus defines the observed state of BoundaryPKIWorker
 type BoundaryPKIWorkerStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 

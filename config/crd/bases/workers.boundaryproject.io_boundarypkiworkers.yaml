@@ -36,8 +36,8 @@ spec:
             description: BoundaryPKIWorkerSpec defines the desired state of BoundaryPKIWorker
             properties:
               registration:
-                description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-                  Important: Run "make" to regenerate code after modifying this file'
+                description: The Registration block containing configurations required
+                  to register this Boundary Worker with its cluster
                 properties:
                   controllerGeneratedActivationToken:
                     description: ControllerGeneratedActivationToken is the token retrieved
@@ -54,8 +54,12 @@ spec:
                     type: string
                 type: object
               storage:
+                description: The Storage block containing the Boundary Worker storage
+                  configuration
                 properties:
                   storageClassName:
+                    description: StorageClass to use. Will use default storage class
+                      if omitted
                     type: string
                 type: object
             required:
@@ -65,9 +69,6 @@ spec:
             description: BoundaryPKIWorkerStatus defines the observed state of BoundaryPKIWorker
             properties:
               conditions:
-                description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                  of cluster Important: Run "make" to regenerate code after modifying
-                  this file'
                 items:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
