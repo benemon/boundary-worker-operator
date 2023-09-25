@@ -477,10 +477,11 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 								},
 							},
 						},
-						Ports: []corev1.ContainerPort{{
-							ContainerPort: 9202,
-							Name:          "proxy",
-						},
+						Ports: []corev1.ContainerPort{
+							{
+								ContainerPort: 9202,
+								Name:          "proxy",
+							},
 							{
 								ContainerPort: 9203,
 								Name:          "ops",
