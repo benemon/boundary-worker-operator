@@ -234,10 +234,13 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	cmAnno := foundCM.Annotations
 	cmAnnoToken := cmAnno[currentActivationTokenAnnotation]
 	cmAnnoId := cmAnno[hcpClusterIDAnnotation]
+	cmAnnoTagHash := cmAnno[customTagHashAnnnotation]
 	rebuildConfigMap := false
+	_, tagHash := tagsForBoundaryPKIWorker(boundaryPkiWorker)
 
 	if cmAnnoToken != boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken ||
-		cmAnnoId != boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID {
+		cmAnnoId != boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID ||
+		cmAnnoTagHash != tagHash {
 		rebuildConfigMap = true
 	}
 

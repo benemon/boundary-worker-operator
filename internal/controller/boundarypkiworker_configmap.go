@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"crypto/md5"
 	"fmt"
 	"strings"
 
@@ -13,19 +14,22 @@ import (
 const (
 	currentActivationTokenAnnotation = "boundaryproject.io/activation-token"
 	hcpClusterIDAnnotation           = "boundaryproject.io/hcp-cluster-id"
+	customTagHashAnnnotation         = "boundaryproject.io/custom-tags"
 )
 
 // Generate the ConfigMap for the BoundaryPKIWorker configuration. Will be added into the StatefulSet as a VolumeMount
 func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ConfigMap, error) {
+	_, tagHash := tagsForBoundaryPKIWorker(boundaryPkiWorker)
 
 	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
 	cmData := make(map[string]string)
 	annotations := make(map[string]string)
 	annotations[currentActivationTokenAnnotation] = boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken
 	annotations[hcpClusterIDAnnotation] = boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID
+	annotations[customTagHashAnnnotation] = tagHash
 
-	cmData["worker.hcl"] = r.configMapData(boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID, boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken, boundaryPkiWorker)
+	cmData["worker.hcl"] = r.configMapData(boundaryPkiWorker)
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -47,7 +51,7 @@ func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 
 // solve for custom tags
 func tagsForBoundaryPKIWorker(
-	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
+	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (string, string) {
 	var sa strings.Builder
 	tags := boundaryPkiWorker.Spec.Tags
 	for k, v := range tags {
@@ -64,20 +68,19 @@ func tagsForBoundaryPKIWorker(
 		sa.WriteString("]")
 		sa.WriteString("\n")
 	}
-	return sa.String()
+
+	renderedTags := sa.String()
+	return renderedTags, fmt.Sprintf("%x", md5.Sum([]byte(renderedTags)))
 }
 
 // If there's a cleaner way of doing this, I'm all ears
-func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
-	controllerGeneratedActivationToken string,
-	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
-
+func (r *BoundaryPKIWorkerReconciler) configMapData(boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
 	var sb strings.Builder
 
 	sb.WriteString("disable_mlock = true")
 	sb.WriteString("\n")
 	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("hcp_boundary_cluster_id= \"%s\"", hcpBoundaryClusterId))
+	sb.WriteString(fmt.Sprintf("hcp_boundary_cluster_id= \"%s\"", boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID))
 	sb.WriteString("\n")
 	sb.WriteString("\n")
 	sb.WriteString("listener \"tcp\" {")
@@ -102,8 +105,8 @@ func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
 	sb.WriteString("\n")
 	sb.WriteString("worker {")
 	sb.WriteString("\n")
-	if controllerGeneratedActivationToken != "" {
-		sb.WriteString(fmt.Sprintf("	controller_generated_activation_token = \"%s\"", controllerGeneratedActivationToken))
+	if boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken != "" {
+		sb.WriteString(fmt.Sprintf("	controller_generated_activation_token = \"%s\"", boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken))
 		sb.WriteString("\n")
 	}
 	sb.WriteString("	auth_storage_path = \"/opt/boundary/data\"")
@@ -117,7 +120,8 @@ func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
 	sb.WriteString(fmt.Sprintf("		boundary_pki_worker = [\"%s\"]", boundaryPkiWorker.Name))
 	sb.WriteString("\n")
 	if boundaryPkiWorker.Spec.Tags != nil && len(boundaryPkiWorker.Spec.Tags) > 0 {
-		sb.WriteString(tagsForBoundaryPKIWorker(boundaryPkiWorker))
+		renderedTags, _ := tagsForBoundaryPKIWorker(boundaryPkiWorker)
+		sb.WriteString(renderedTags)
 	}
 	sb.WriteString("	}")
 	sb.WriteString("\n")
