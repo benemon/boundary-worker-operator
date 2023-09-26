@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"crypto/md5"
 	"fmt"
 	"time"
 
@@ -33,10 +34,15 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 		return nil, err
 	}
 
+	resources, resHash := resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker)
+	annotations := make(map[string]string)
+	annotations[resourcesAnnotation] = resHash
+
 	ss := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      boundaryPkiWorker.Name,
-			Namespace: boundaryPkiWorker.Namespace,
+			Name:        boundaryPkiWorker.Name,
+			Namespace:   boundaryPkiWorker.Namespace,
+			Annotations: annotations,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
@@ -121,7 +127,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 								MountPath: "/opt/boundary/data/",
 							},
 						},
-						Resources: *resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker),
+						Resources: *resources,
 					}},
 				},
 			},
@@ -136,13 +142,12 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 	return ss, nil
 }
 
-func resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) *corev1.ResourceRequirements {
+func resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ResourceRequirements, string) {
 	rr := &corev1.ResourceRequirements{
 		Requests: buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Requests),
 		Limits:   buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Limits),
 	}
-
-	return rr
+	return rr, fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%v", rr))))
 }
 
 func buildResourcesBoundaryPKIWorker(runtimeResources *workersv1alpha1.BoundaryPKIWorkerRuntimeSpec) corev1.ResourceList {
