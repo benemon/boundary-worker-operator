@@ -51,9 +51,9 @@ type BoundaryPKIWorkerReconciler struct {
 	Recorder record.EventRecorder
 }
 
-//+kubebuilder:rbac:groups=workers.boundaryproject.io,resources=boundarypkiworkers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=workers.boundaryproject.io,resources=boundarypkiworkers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=workers.boundaryproject.io,resources=boundarypkiworkers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=workers.boundaryproject.io,resources=boundarypkiworkers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=workers.boundaryproject.io,resources=boundarypkiworkers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=workers.boundaryproject.io,resources=boundarypkiworkers/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch

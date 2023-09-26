@@ -15,6 +15,7 @@ const (
 	hcpClusterIDAnnotation           = "boundaryproject.io/hcp-cluster-id"
 )
 
+// Generate the ConfigMap for the BoundaryPKIWorker configuration. Will be added into the StatefulSet as a VolumeMount
 func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ConfigMap, error) {
 
@@ -44,6 +45,7 @@ func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 	return cm, nil
 }
 
+// If there's a cleaner way of doing this, I'm all ears
 func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
 	controllerGeneratedActivationToken string,
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// labelsForMemcached returns the labels for selecting the resources
+// labelsForBoundaryPKIWorker returns the labels for selecting the resources
 // More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 func labelsForBoundaryPKIWorker(name string) map[string]string {
 	var imageTag string
@@ -22,8 +22,8 @@ func labelsForBoundaryPKIWorker(name string) map[string]string {
 	}
 }
 
-// imageForMemcached gets the Operand image which is managed by this controller
-// from the MEMCACHED_IMAGE environment variable defined in the config/manager/manager.yaml
+// imagesForBoundaryPKIWorker gets the Operand image which is managed by this controller
+// from the BOUNDARY_WORKER_IMAGE environment variable defined in the config/manager/manager.yaml
 func imageForBoundaryPKIWorker() (string, error) {
 	var imageEnvVar = "BOUNDARY_WORKER_IMAGE"
 	image, found := os.LookupEnv(imageEnvVar)

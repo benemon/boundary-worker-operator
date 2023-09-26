@@ -16,6 +16,7 @@ const (
 	boundaryPkiWorkerReplicas = 1
 )
 
+// Generate the StatefulSet for the BoundaryPKIWorker
 func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*appsv1.StatefulSet, error) {
 	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)

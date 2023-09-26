@@ -7,6 +7,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+// Generate the Headless Service for the StatefulSet
 func (r *BoundaryPKIWorkerReconciler) serviceForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.Service, error) {
 
