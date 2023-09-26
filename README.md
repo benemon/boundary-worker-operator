@@ -74,8 +74,15 @@ spec:
   registration:
     controllerGeneratedActivationToken: neslat_... # required on first run; can be removed after if desired
     hcpBoundaryClusterID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx # required - defines the HCP Boundary cluster to communicate with
-  storage: # optional - can be used to override the cluster storage configuration
-    storageClassName: managed-csi # optional - can be used to override the default storageclass if required
+  resources: # optional - permits the declaration of runtime resources as required
+    requests: # optional - standard Kubernetes resource requests
+      cpu: # optional
+      memory: # optional
+    limits # optional - standard Kubernetes resource limits
+      cpu: # optional
+      memory: # optional
+    storage: # optional - can be used to override the cluster storage configuration
+      storageClassName: managed-csi # optional - can be used to override the default storageclass if required
   tags: #optional - map of custom tags to add to the Boundary Worker configuration. Changes in tags triggers a new rollout.
      key1: value1
      key2: value2, value3, value4 # comma seperated tags are supported, and will be split into discreet values for the given key
