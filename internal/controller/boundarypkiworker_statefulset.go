@@ -170,7 +170,7 @@ func volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorkerName string, stor
 func (r *BoundaryPKIWorkerReconciler) rolloutStatefulSet(ctx context.Context, statefulSet appsv1.StatefulSet) {
 	log := log.FromContext(ctx)
 	annotations := make(map[string]string)
-	annotations[restartedAtAnnotation] = time.Now().Format(time.DateTime)
+	annotations[restartedAtAnnotation] = time.Now().Format("2006-01-02 15:04:05")
 	statefulSet.Spec.Template.Annotations = annotations
 	if err := r.Update(ctx, &statefulSet); err != nil {
 		log.Error(err, "failed to rollout StatefulSet",
