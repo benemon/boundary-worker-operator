@@ -10,18 +10,28 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	currentActivationTokenAnnotation = "boundaryproject.io/activation-token"
+	hcpClusterIDAnnotation           = "boundaryproject.io/hcp-cluster-id"
+)
+
 func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ConfigMap, error) {
 
 	ls := labelsForBoundaryPKIWorker(boundaryPkiWorker.Name)
 	cmData := make(map[string]string)
+	annotations := make(map[string]string)
+	annotations[currentActivationTokenAnnotation] = boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken
+	annotations[hcpClusterIDAnnotation] = boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID
+
 	cmData["worker.hcl"] = r.configMapData(boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID, boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken, boundaryPkiWorker)
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
-			Namespace: boundaryPkiWorker.Namespace,
-			Labels:    ls,
+			Name:        fmt.Sprintf("%s-configuration", boundaryPkiWorker.Name),
+			Namespace:   boundaryPkiWorker.Namespace,
+			Labels:      ls,
+			Annotations: annotations,
 		},
 		Data: cmData,
 	}

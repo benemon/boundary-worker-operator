@@ -231,9 +231,66 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// TODO Implement checks for cluster id changes and token changes
-	m := foundCM.Data
-	data := m["worker.hcl"]
-	fmt.Println(data)
+	cmAnno := foundCM.Annotations
+	cmAnnoToken := cmAnno[currentActivationTokenAnnotation]
+	cmAnnoId := cmAnno[hcpClusterIDAnnotation]
+	rebuildConfigMap := false
+
+	if cmAnnoToken != boundaryPkiWorker.Spec.Registration.ControllerGeneratedActivationToken ||
+		cmAnnoId != boundaryPkiWorker.Spec.Registration.HCPBoundaryClusterID {
+		rebuildConfigMap = true
+	}
+
+	if rebuildConfigMap {
+		configMap, err := r.configMapForBoundaryPKIWorker(boundaryPkiWorker)
+		if err != nil {
+			log.Error(err, "failed to define new ConfigMap resource for BoundaryPKIWorker")
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
+				Status: metav1.ConditionFalse, Reason: "reconciling",
+				Message: fmt.Sprintf("failed to create ConfigMap for the custom resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+
+			if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
+				log.Error(err, "failed to update BoundaryPKIWorker status")
+				return ctrl.Result{}, err
+			}
+
+			return ctrl.Result{}, err
+		}
+
+		if err = r.Update(ctx, configMap); err != nil {
+			log.Error(err, "failed to update ConfigMap",
+				"ConfigMap.Namespace", configMap.Namespace, "ConfigMap.Name", configMap.Name)
+
+			// Re-fetch the Custom Resource before update the status
+			// so that we have the latest state of the resource on the cluster and we will avoid
+			// raise the issue "the object has been modified, please apply
+			// your changes to the latest version and try again" which would re-trigger the reconciliation
+			if err := r.Get(ctx, req.NamespacedName, boundaryPkiWorker); err != nil {
+				log.Error(err, "failed to re-fetch boundaryPkiWorker")
+				return ctrl.Result{}, err
+			}
+
+			// The following implementation will update the status
+			meta.SetStatusCondition(&boundaryPkiWorker.Status.Conditions, metav1.Condition{Type: typeAvailableBoundaryPKIWorker,
+				Status: metav1.ConditionFalse, Reason: "resizing",
+				Message: fmt.Sprintf("failed to update the ConfigMap for the owned resource (%s): (%s)", boundaryPkiWorker.Name, err)})
+
+			if err := r.Status().Update(ctx, boundaryPkiWorker); err != nil {
+				log.Error(err, "failed to update BoundaryPkiWorker status")
+				return ctrl.Result{}, err
+			}
+			log.Info("updated ConfigMap succesfully")
+			return ctrl.Result{}, err
+		}
+
+		// Now, that we update the size we want to requeue the reconciliation
+		// so that we can ensure that we have the latest state of the resource before
+		// update. Also, it will help ensure the desired state on the cluster
+		log.Info("completed replica reconciliation block")
+		return ctrl.Result{Requeue: true}, nil
+	}
 
 	var replicas int32 = boundaryPkiWorkerReplicas
 	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, foundSS.Spec.Replicas))
