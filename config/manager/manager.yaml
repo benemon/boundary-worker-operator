@@ -74,7 +74,7 @@ spec:
         name: manager
         env:
         - name: BOUNDARY_WORKER_IMAGE
-          value: quay.io/benjamin_holmes/boundary-enterprise:ubi9-amd64
+          value: quay.io/benjamin_holmes/boundary-worker:ubi9
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
