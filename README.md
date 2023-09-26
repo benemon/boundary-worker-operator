@@ -96,7 +96,7 @@ The Operator will create several resources:
 Once deployed, and assuming the Worker is configured correctly, the Worker will register with the HCP Cluster. The Worker will be configured with a number of default, Kubernetes specific tags:
 
 ```sh
-	tags {
+tags {
     	type = ["kubernetes"]
 		namespace = ["application"]
 		boundary_pki_worker = ["worker1"]
