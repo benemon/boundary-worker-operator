@@ -1,46 +1,127 @@
 # boundary-worker-operator
-// TODO(user): Add simple overview of use/purpose
+This Operator deploys an HCP Boundary Worker onto Kubernetes.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The Boundary Worker Operator only supports Boundary's Controller-Led Authorisation flow. Before deploying, two configuration elements are required:
+
+* HCP Boundary Cluster ID - the long alphanumeric value in your HCP Boundary url
+* Controller Generated Activation Token
+
+In order to generate a new token before creating the BoundaryPKIWorker CustomResources:
+
+```sh
+$ boundary workers create controller-led -name=my-worker
+
+Worker information:
+  Active Connection Count:                 0
+  Controller-Generated Activation Token:   neslat_..
+  Created Time:                            Tue, 26 Sep 2023 10:09:35 BST
+  ID:                                      w_wWl6LJ0viX
+  Name:                                    worker-operator
+  Type:                                    pki
+  Updated Time:                            Tue, 26 Sep 2023 10:09:35 BST
+  Version:                                 1
+
+  Scope:
+    ID:                                    global
+    Name:                                  global
+    Type:                                  global
+
+  Authorized Actions:
+    no-op
+    read
+    update
+    delete
+    add-worker-tags
+    set-worker-tags
+    remove-worker-tags
+
+```
+
+
 
 ## Getting Started
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ### Running on the cluster
-1. Install Instances of Custom Resources:
 
+### Deploy controller
+UnDeploy the controller from the cluster:
+
+On Kubernetes:
 ```sh
-kubectl apply -f config/samples/
+make deploy
 ```
 
-2. Build and push your image to the location specified by `IMG`:
-
+On OpenShift:
 ```sh
-make docker-build docker-push IMG=<some-registry>/boundary-worker-operator:tag
+make oc-deploy
 ```
 
-3. Deploy the controller to the cluster with the image specified by `IMG`:
+### Create the CR
 
-```sh
-make deploy IMG=<some-registry>/boundary-worker-operator:tag
+```yaml
+apiVersion: workers.boundaryproject.io/v1alpha1
+kind: BoundaryPKIWorker
+metadata:
+  labels:
+    app.kubernetes.io/name: boundarypkiworker
+    app.kubernetes.io/instance: boundarypkiworker-sample
+    app.kubernetes.io/part-of: boundary-worker-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: boundary-worker-operator
+  name: boundarypkiworker-sample
+spec:
+  registration:
+    controllerGeneratedActivationToken: neslat_... # required on first run; can be removed after if desired
+    hcpBoundaryClusterID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx # required - defines the HCP Boundary cluster to communicate with
+  storage: # optional - can be used to override the cluster storage configuration
+    storageClassName: managed-csi # optional - can be used to override the default storageclass if required
+
 ```
 
-### Uninstall CRDs
-To delete the CRDs from the cluster:
+Then create the CR in the cluster:
 
 ```sh
-make uninstall
+$ kubectl apply -f boundarypkiworker-sample.yaml
 ```
+
+### Outcome
+The Operator will create several resources:
+
+* StatefulSet - Worker deployment, maintaining a 1-1 mapping with a PersistentVolume
+* ConfigMap - Worker configuration
+* Headless Service - required for the StatefulSet
+* PersistentVolume - stores Worker state
+
+Once deployed, and assuming the Worker is configured correctly, the Worker will register with the HCP Cluster. The Worker will be configured with a number of default, Kubernetes specific tags:
+
+```sh
+	tags {
+    	type = ["kubernetes"]
+		namespace = ["application"]
+		boundary_pki_worker = ["worker1"]
+	}
+```
+
+* type - Kubernetes
+* namespace - The Namespace the Worker is deployed in
+* boundary_pki_worker -the name of the worker, derived from the CR
+
 
 ### Undeploy controller
 UnDeploy the controller from the cluster:
 
+On Kubernetes:
 ```sh
 make undeploy
 ```
 
+On OpenShift:
+```sh
+make oc-undeploy
+```
 ## Contributing
 // TODO(user): Add detailed information on how you would like others to contribute to this project
 
