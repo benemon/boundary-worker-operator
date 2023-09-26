@@ -76,6 +76,10 @@ spec:
     hcpBoundaryClusterID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx # required - defines the HCP Boundary cluster to communicate with
   storage: # optional - can be used to override the cluster storage configuration
     storageClassName: managed-csi # optional - can be used to override the default storageclass if required
+  tags: #optional - map of custom tags to add to the Boundary Worker configuration. Changes in tags triggers a new rollout.
+     key1: value1
+     key2: value2, value3, value4 # comma seperated tags are supported, and will be split into discreet values for the given key
+     key3: value5
 
 ```
 
@@ -93,7 +97,7 @@ The Operator will create several resources:
 * Headless Service - required for the StatefulSet
 * PersistentVolume - stores Worker state
 
-Once deployed, and assuming the Worker is configured correctly, the Worker will register with the HCP Cluster. The Worker will be configured with a number of default, Kubernetes specific tags:
+Once deployed, and assuming the Worker is configured correctly, the Worker will register with the HCP Cluster. In addition to any custom tags you may supply in the CR, the Worker will be configured with a number of default, Kubernetes specific tags:
 
 ```sh
 tags {
@@ -106,7 +110,6 @@ tags {
 * type - Kubernetes
 * namespace - The Namespace the Worker is deployed in
 * boundary_pki_worker -the name of the worker, derived from the CR
-
 
 ### Undeploy controller
 UnDeploy the controller from the cluster:
