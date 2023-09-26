@@ -292,7 +292,14 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// so that we can ensure that we have the latest state of the resource before
 		// update. Also, it will help ensure the desired state on the cluster
 		log.Info("the configmap has been updated so the statefulset should be redeployed")
-		r.rolloutStatefulSet(ctx, *foundSS)
+		managedSS := &appsv1.StatefulSet{}
+		err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, managedSS)
+		if err != nil && apierrors.IsNotFound(err) {
+			log.Error(err, "failed to update StatefulSet for ConfigMap change",
+				"StatefulSet.Namespace", managedSS.Namespace, "StatefulSet.Name", managedSS.Name)
+			return ctrl.Result{}, err
+		}
+		r.rolloutStatefulSet(ctx, *managedSS)
 		log.Info("completed cm reconciliation block")
 		return ctrl.Result{Requeue: true}, nil
 	}
