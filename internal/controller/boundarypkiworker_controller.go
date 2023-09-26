@@ -231,6 +231,9 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	// TODO Implement checks for cluster id changes and token changes
+	m := foundCM.Data
+	data := m["worker.hcl"]
+	fmt.Println(data)
 
 	var replicas int32 = boundaryPkiWorkerReplicas
 	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, foundSS.Spec.Replicas))

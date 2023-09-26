@@ -52,6 +52,8 @@ spec:
                       and will be used by a worker when initially connecting to HCP
                       Boundary. Your cluster id is the UUID in the controller url.
                     type: string
+                required:
+                - hcpBoundaryClusterID
                 type: object
               storage:
                 description: The Storage block containing the Boundary Worker storage

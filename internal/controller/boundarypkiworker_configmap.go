@@ -34,7 +34,10 @@ func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 	return cm, nil
 }
 
-func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string, controllerGeneratedActivationToken string, boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
+func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
+	controllerGeneratedActivationToken string,
+	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
+
 	var sb strings.Builder
 
 	sb.WriteString("disable_mlock = true")
@@ -65,8 +68,10 @@ func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
 	sb.WriteString("\n")
 	sb.WriteString("worker {")
 	sb.WriteString("\n")
-	sb.WriteString(fmt.Sprintf("	controller_generated_activation_token = \"%s\"", controllerGeneratedActivationToken))
-	sb.WriteString("\n")
+	if controllerGeneratedActivationToken != "" {
+		sb.WriteString(fmt.Sprintf("	controller_generated_activation_token = \"%s\"", controllerGeneratedActivationToken))
+		sb.WriteString("\n")
+	}
 	sb.WriteString("	auth_storage_path = \"/opt/boundary/data\"")
 	sb.WriteString("\n")
 	sb.WriteString("	tags {")
