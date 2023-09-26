@@ -31,6 +31,9 @@ type BoundaryPKIWorkerSpec struct {
 
 	// The Storage block containing the Boundary Worker storage configuration
 	Storage BoundaryPKIWorkerStorageSpec `json:"storage,omitempty"`
+
+	//The tags block containg a map of extra, custom tags to associate with the Boundary Worker. Supports comma-seperated values.
+	Tags map[string]string `json:"tags,omitempty"`
 }
 
 type BoundaryPKIWorkerStorageSpec struct {

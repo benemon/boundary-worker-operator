@@ -45,6 +45,27 @@ func (r *BoundaryPKIWorkerReconciler) configMapForBoundaryPKIWorker(
 	return cm, nil
 }
 
+// solve for custom tags
+func tagsForBoundaryPKIWorker(
+	boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) string {
+	var sa strings.Builder
+	tags := boundaryPkiWorker.Spec.Tags
+	for k, v := range tags {
+		sa.WriteString(fmt.Sprintf("%s = [", k))
+
+		tags := strings.Split(v, ",")
+		for i, val := range tags {
+			sa.WriteString(fmt.Sprintf("\"%s\"", val))
+			if i != len(tags) {
+				sa.WriteString(", ")
+			}
+		}
+		sa.WriteString("]")
+		sa.WriteString("\n")
+	}
+	return sa.String()
+}
+
 // If there's a cleaner way of doing this, I'm all ears
 func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
 	controllerGeneratedActivationToken string,
@@ -94,6 +115,9 @@ func (r *BoundaryPKIWorkerReconciler) configMapData(hcpBoundaryClusterId string,
 	sb.WriteString("\n")
 	sb.WriteString(fmt.Sprintf("		boundary_pki_worker = [\"%s\"]", boundaryPkiWorker.Name))
 	sb.WriteString("\n")
+	if boundaryPkiWorker.Spec.Tags != nil && len(boundaryPkiWorker.Spec.Tags) > 0 {
+		sb.WriteString(tagsForBoundaryPKIWorker(boundaryPkiWorker))
+	}
 	sb.WriteString("	}")
 	sb.WriteString("\n")
 	sb.WriteString("}")

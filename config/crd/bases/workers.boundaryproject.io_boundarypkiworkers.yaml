@@ -64,6 +64,12 @@ spec:
                       if omitted
                     type: string
                 type: object
+              tags:
+                additionalProperties:
+                  type: string
+                description: The tags block containg a map of extra, custom tags to
+                  associate with the Boundary Worker. Supports comma-seperated values.
+                type: object
             required:
             - registration
             type: object
