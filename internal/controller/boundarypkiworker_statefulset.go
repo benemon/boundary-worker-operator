@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -10,10 +12,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	workersv1alpha1 "github.com/benemon/boundary-worker-operator/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
 	boundaryPkiWorkerReplicas = 1
+	restartedAtAnnotation     = "boundaryproject.io/worker/restartAt"
 )
 
 // Generate the StatefulSet for the BoundaryPKIWorker
@@ -160,4 +164,18 @@ func volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorkerName string, stor
 		}
 		return pvct
 	}
+}
+
+// Update an annotation in the StatefulSet which will trigger Kubernetes to rollout it out again
+func (r *BoundaryPKIWorkerReconciler) rolloutStatefulSet(ctx context.Context, statefulSet appsv1.StatefulSet) {
+	log := log.FromContext(ctx)
+	annotations := make(map[string]string)
+	annotations[restartedAtAnnotation] = time.Now().Format(time.DateTime)
+	statefulSet.Spec.Template.Annotations = annotations
+	if err := r.Update(ctx, &statefulSet); err != nil {
+		log.Error(err, "failed to rollout StatefulSet",
+			"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
+	}
+	log.Info("succesfully triggered rollout of StatefulSet",
+		"StatefulSet.Namespace", statefulSet.Namespace, "StatefulSet.Name", statefulSet.Name)
 }

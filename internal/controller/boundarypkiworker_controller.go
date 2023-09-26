@@ -291,7 +291,9 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// Now, that we update the size we want to requeue the reconciliation
 		// so that we can ensure that we have the latest state of the resource before
 		// update. Also, it will help ensure the desired state on the cluster
-		log.Info("completed replica reconciliation block")
+		log.Info("the configmap has been updated so the statefulset should be redeployed")
+		r.rolloutStatefulSet(ctx, *foundSS)
+		log.Info("completed cm reconciliation block")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
