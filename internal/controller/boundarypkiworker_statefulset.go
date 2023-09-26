@@ -137,19 +137,21 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 }
 
 func resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) *corev1.ResourceRequirements {
-
 	rr := &corev1.ResourceRequirements{
-		Requests: *buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Requests),
-		Limits:   *buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Limits),
+		Requests: buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Requests),
+		Limits:   buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Limits),
 	}
+
 	return rr
 }
 
-func buildResourcesBoundaryPKIWorker(runtimeResources *workersv1alpha1.BoundaryPKIWorkerRuntimeSpec) *corev1.ResourceList {
-
-	rl := &corev1.ResourceList{
-		corev1.ResourceCPU:    resource.MustParse(runtimeResources.CPU),
-		corev1.ResourceMemory: resource.MustParse(runtimeResources.Memory),
+func buildResourcesBoundaryPKIWorker(runtimeResources *workersv1alpha1.BoundaryPKIWorkerRuntimeSpec) corev1.ResourceList {
+	rl := corev1.ResourceList{}
+	if runtimeResources.CPU != "" {
+		rl[corev1.ResourceCPU] = resource.MustParse(runtimeResources.CPU)
+	}
+	if runtimeResources.Memory != "" {
+		rl[corev1.ResourceMemory] = resource.MustParse(runtimeResources.Memory)
 	}
 	return rl
 }
