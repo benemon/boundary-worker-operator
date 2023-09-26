@@ -17,7 +17,7 @@ import (
 
 const (
 	boundaryPkiWorkerReplicas = 1
-	restartedAtAnnotation     = "boundaryproject.io/worker/restartAt"
+	restartedAtAnnotation     = "boundaryproject.io/restarted-at"
 )
 
 // Generate the StatefulSet for the BoundaryPKIWorker
