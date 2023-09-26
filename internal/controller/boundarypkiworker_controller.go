@@ -304,11 +304,12 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	var replicas int32 = boundaryPkiWorkerReplicas
-	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", replicas, foundSS.Spec.Replicas))
+	desiredReplicas := boundaryPkiWorkerReplicas
+	currentReplicas := *foundSS.Spec.Replicas
+	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", desiredReplicas, currentReplicas))
 	log.Info("checking if the statefulset has the correct number of replicas")
-	if *foundSS.Spec.Replicas != replicas {
-		foundSS.Spec.Replicas = &replicas
+	if currentReplicas != desiredReplicas {
+		foundSS.Spec.Replicas = &desiredReplicas
 		if err = r.Update(ctx, foundSS); err != nil {
 			log.Error(err, "failed to update StatefulSet",
 				"StatefulSet.Namespace", foundSS.Namespace, "StatefulSet.Name", foundSS.Name)
