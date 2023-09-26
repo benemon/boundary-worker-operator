@@ -55,14 +55,45 @@ spec:
                 required:
                 - hcpBoundaryClusterID
                 type: object
-              storage:
-                description: The Storage block containing the Boundary Worker storage
-                  configuration
+              resources:
+                description: The Resources block containing runtime resource requirements
+                  for the Boundary Worker
                 properties:
-                  storageClassName:
-                    description: StorageClass to use. Will use default storage class
-                      if omitted
-                    type: string
+                  limits:
+                    description: The Limits block containing the Boundary Worker CPU
+                      and Memory limits
+                    properties:
+                      cpu:
+                        description: The CPU block containing the Boundary Worker
+                          CPU requirements
+                        type: string
+                      memory:
+                        description: The Memory block containing the Boundary Worker
+                          CPU requirements
+                        type: string
+                    type: object
+                  requests:
+                    description: The Requests block containing the Boundary Worker
+                      CPU and Memory requests
+                    properties:
+                      cpu:
+                        description: The CPU block containing the Boundary Worker
+                          CPU requirements
+                        type: string
+                      memory:
+                        description: The Memory block containing the Boundary Worker
+                          CPU requirements
+                        type: string
+                    type: object
+                  storage:
+                    description: The Storage block containing the Boundary Worker
+                      storage configuration
+                    properties:
+                      storageClassName:
+                        description: StorageClass to use. Will use default storage
+                          class if omitted
+                        type: string
+                    type: object
                 type: object
               tags:
                 additionalProperties:

@@ -29,11 +29,27 @@ type BoundaryPKIWorkerSpec struct {
 	// The Registration block containing configurations required to register this Boundary Worker with its cluster
 	Registration BoundaryPKIWorkerRegistrationSpec `json:"registration"`
 
-	// The Storage block containing the Boundary Worker storage configuration
-	Storage BoundaryPKIWorkerStorageSpec `json:"storage,omitempty"`
+	// The Resources block containing runtime resource requirements for the Boundary Worker
+	Resources BoundaryPKIWorkerResourcesSpec `json:"resources,omitempty"`
 
 	//The tags block containg a map of extra, custom tags to associate with the Boundary Worker. Supports comma-seperated values.
 	Tags map[string]string `json:"tags,omitempty"`
+}
+
+type BoundaryPKIWorkerRuntimeSpec struct {
+	// The CPU block containing the Boundary Worker CPU requirements
+	CPU string `json:"cpu,omitempty"`
+	// The Memory block containing the Boundary Worker CPU requirements
+	Memory string `json:"memory,omitempty"`
+}
+
+type BoundaryPKIWorkerResourcesSpec struct {
+	// The Storage block containing the Boundary Worker storage configuration
+	Storage BoundaryPKIWorkerStorageSpec `json:"storage,omitempty"`
+	// The Requests block containing the Boundary Worker CPU and Memory requests
+	Requests BoundaryPKIWorkerRuntimeSpec `json:"requests,omitempty"`
+	// The Limits block containing the Boundary Worker CPU and Memory limits
+	Limits BoundaryPKIWorkerRuntimeSpec `json:"limits,omitempty"`
 }
 
 type BoundaryPKIWorkerStorageSpec struct {

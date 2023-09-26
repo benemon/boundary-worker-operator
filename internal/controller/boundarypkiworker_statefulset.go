@@ -18,6 +18,7 @@ import (
 const (
 	boundaryPkiWorkerReplicas int32 = 1
 	restartedAtAnnotation           = "boundaryproject.io/restarted-at"
+	resourcesAnnotation             = "boundaryproject.io/resources"
 )
 
 // Generate the StatefulSet for the BoundaryPKIWorker
@@ -47,7 +48,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 					ObjectMeta: metav1.ObjectMeta{
 						Name: fmt.Sprintf("%s-storage-volume", boundaryPkiWorker.Name),
 					},
-					Spec: volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorker.Name, boundaryPkiWorker.Spec.Storage.StorageClassName),
+					Spec: volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorker.Name, boundaryPkiWorker.Spec.Resources.Storage.StorageClassName),
 				},
 			},
 			ServiceName: boundaryPkiWorker.Name,
@@ -89,7 +90,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 							// then, you MUST ensure that the Dockerfile defines a User ID OR you MUST leave the "RunAsNonRoot" and
 							// "RunAsUser" fields empty.
 							RunAsNonRoot: &[]bool{true}[0],
-							// The memcached image does not use a non-zero numeric user as the default user.
+							// The BoundaryPKIWorker image does not use a non-zero numeric user as the default user.
 							// Due to RunAsNonRoot field being set to true, we need to force the user in the
 							// container to a non-zero numeric user. We do this using the RunAsUser field.
 							// However, if you are looking to provide solution for K8s vendors like OpenShift
@@ -120,6 +121,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 								MountPath: "/opt/boundary/data/",
 							},
 						},
+						Resources: *resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker),
 					}},
 				},
 			},
@@ -132,6 +134,24 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 		return nil, err
 	}
 	return ss, nil
+}
+
+func resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) *corev1.ResourceRequirements {
+
+	rr := &corev1.ResourceRequirements{
+		Requests: *buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Requests),
+		Limits:   *buildResourcesBoundaryPKIWorker(&boundaryPkiWorker.Spec.Resources.Limits),
+	}
+	return rr
+}
+
+func buildResourcesBoundaryPKIWorker(runtimeResources *workersv1alpha1.BoundaryPKIWorkerRuntimeSpec) *corev1.ResourceList {
+
+	rl := &corev1.ResourceList{
+		corev1.ResourceCPU:    resource.MustParse(runtimeResources.CPU),
+		corev1.ResourceMemory: resource.MustParse(runtimeResources.Memory),
+	}
+	return rl
 }
 
 func volumeClaimTemplateSpecBoundaryPKIWorker(boundaryPkiWorkerName string, storageClassName string) corev1.PersistentVolumeClaimSpec {

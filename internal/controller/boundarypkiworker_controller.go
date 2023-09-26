@@ -38,9 +38,9 @@ import (
 
 // Definitions to manage status conditions
 const (
-	// typeAvailableMemcached represents the status of the Deployment reconciliation
+	// typeAvailableBoundaryPKIWorker represents the status of the StatefulSet reconciliation
 	typeAvailableBoundaryPKIWorker = "Available"
-	// typeDegradedMemcached represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
+	// typeDegradedBoundaryPKIWorker represents the status used when the custom resource is deleted and the finalizer operations are must to occur.
 	typeDegradedBoundaryPKIWorker = "Degraded"
 )
 
@@ -73,8 +73,8 @@ type BoundaryPKIWorkerReconciler struct {
 func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := log.FromContext(ctx)
 	log.Info("starting reconciliation loop")
-	// Fetch the Memcached instance
-	// The purpose is check if the Custom Resource for the Kind Memcached
+	// Fetch the BoundaryPKIWorker instance
+	// The purpose is check if the Custom Resource for the Kind BoundaryPKIWorker
 	// is applied on the cluster if not we return nil to stop the reconciliation
 	boundaryPkiWorker := &workersv1alpha1.BoundaryPKIWorker{}
 	err := r.Get(ctx, req.NamespacedName, boundaryPkiWorker)
@@ -99,7 +99,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		// Let's re-fetch the memcached Custom Resource after update the status
+		// Let's re-fetch the BoundaryPKIWorker Custom Resource after update the status
 		// so that we have the latest state of the resource on the cluster and we will avoid
 		// raise the issue "the object has been modified, please apply
 		// your changes to the latest version and try again" which would re-trigger the reconciliation
@@ -188,12 +188,12 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	// Check if the deployment already exists, if not create a new one
+	// Check if the StatefulSet already exists, if not create a new one
 	foundSS := &appsv1.StatefulSet{}
 	log.Info("checking if the statefulset already exists")
 	err = r.Get(ctx, types.NamespacedName{Name: boundaryPkiWorker.Name, Namespace: boundaryPkiWorker.Namespace}, foundSS)
 	if err != nil && apierrors.IsNotFound(err) {
-		// Define a new deployment
+		// Define a new StatefulSet
 		statefulSet, err := r.statefulsetForBoundaryPKIWorker(boundaryPkiWorker)
 		if err != nil {
 			log.Error(err, "failed to define new StatefulSet resource for BoundaryPKIWorker")
@@ -219,7 +219,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, err
 		}
 
-		// Deployment created successfully
+		// StatefulSet created successfully
 		// We will requeue the reconciliation so that we can ensure the state
 		// and move forward for the next operations
 		log.Info("completed StatefulSet reconciliation block")
