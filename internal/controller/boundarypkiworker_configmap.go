@@ -51,12 +51,13 @@ func tagsForBoundaryPKIWorker(
 	var sa strings.Builder
 	tags := boundaryPkiWorker.Spec.Tags
 	for k, v := range tags {
-		sa.WriteString(fmt.Sprintf("%s = [", k))
-
+		sa.WriteString(fmt.Sprintf("		%s = [", k))
 		tags := strings.Split(v, ",")
-		for i, val := range tags {
-			sa.WriteString(fmt.Sprintf("\"%s\"", val))
-			if i != len(tags) {
+		count := 0
+		for _, val := range tags {
+			count++
+			sa.WriteString(fmt.Sprintf("\"%s\"", strings.TrimSpace(val)))
+			if count != len(tags) {
 				sa.WriteString(", ")
 			}
 		}
