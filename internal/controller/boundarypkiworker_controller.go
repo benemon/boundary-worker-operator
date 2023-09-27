@@ -322,13 +322,13 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	currentResourcesHash := foundSS.Annotations[resourcesAnnotation]
 	desiredResources, desiredResourcesHash := resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker)
 	log.Info("checking if the statefulset has the desired resources")
-	log.Info(fmt.Sprintf("desired resources %s, current resources %s", currentResourcesHash, desiredResourcesHash))
+	log.Info(fmt.Sprintf("desired resources %s, current resources %s", desiredResourcesHash, currentResourcesHash))
 	if currentResourcesHash != desiredResourcesHash {
 
-		for _, container := range foundSS.Spec.Template.Spec.Containers {
+		for idx, container := range foundSS.Spec.Template.Spec.Containers {
 			if container.Name == boundaryWorkerContainerName {
 				log.Info("updating worker resources on statefulset")
-				container.Resources = *desiredResources
+				foundSS.Spec.Template.Spec.Containers[idx].Resources = *desiredResources
 			}
 		}
 
