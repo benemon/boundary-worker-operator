@@ -307,8 +307,8 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Update on change of replicas
 	desiredReplicas := boundaryPkiWorkerReplicas
 	currentReplicas := *foundSS.Spec.Replicas
+	log.Info("checking if the statefulset has the desired number of replicas")
 	log.Info(fmt.Sprintf("desired replicas %d, current replicas %d", desiredReplicas, currentReplicas))
-	log.Info("checking if the statefulset has the correct number of replicas")
 	if currentReplicas != desiredReplicas {
 		foundSS.Spec.Replicas = &desiredReplicas
 		err := r.UpdateStatefulSet(ctx, req, foundSS, boundaryPkiWorker)
@@ -321,9 +321,17 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Update on change of resource requirements
 	currentResourcesHash := foundSS.Annotations[resourcesAnnotation]
 	desiredResources, desiredResourcesHash := resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker)
+	log.Info("checking if the statefulset has the desired resources")
+	log.Info(fmt.Sprintf("desired resources %s, current resources %s", currentResourcesHash, desiredResourcesHash))
 	if currentResourcesHash != desiredResourcesHash {
-		//TODO remove magic number
-		foundSS.Spec.Template.Spec.Containers[0].Resources = *desiredResources
+
+		for _, container := range foundSS.Spec.Template.Spec.Containers {
+			if container.Name == boundaryWorkerContainerName {
+				log.Info("updating worker resources on statefulset")
+				container.Resources = *desiredResources
+			}
+		}
+
 		err := r.UpdateStatefulSet(ctx, req, foundSS, boundaryPkiWorker)
 		if err != nil {
 			return ctrl.Result{}, err

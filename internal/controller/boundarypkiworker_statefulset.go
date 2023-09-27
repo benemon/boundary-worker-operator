@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	boundaryPkiWorkerReplicas int32 = 1
-	restartedAtAnnotation           = "boundaryproject.io/restarted-at"
-	resourcesAnnotation             = "boundaryproject.io/resources"
+	boundaryPkiWorkerReplicas   int32 = 1
+	restartedAtAnnotation             = "boundaryproject.io/restarted-at"
+	resourcesAnnotation               = "boundaryproject.io/resources"
+	boundaryWorkerContainerName       = "boundary-worker"
 )
 
 // Generate the StatefulSet for the BoundaryPKIWorker
@@ -85,7 +86,7 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 					},
 					Containers: []corev1.Container{{
 						Image:           image,
-						Name:            "boundary-worker",
+						Name:            boundaryWorkerContainerName,
 						ImagePullPolicy: corev1.PullAlways,
 						// Ensure restrictive context for the container
 						// More info: https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted
