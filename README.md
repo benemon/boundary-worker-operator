@@ -78,7 +78,7 @@ spec:
     requests: # optional - standard Kubernetes resource requests
       cpu: # optional
       memory: # optional
-    limits # optional - standard Kubernetes resource limits
+    limits: # optional - standard Kubernetes resource limits
       cpu: # optional
       memory: # optional
     storage: # optional - can be used to override the cluster storage configuration
