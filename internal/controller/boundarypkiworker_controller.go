@@ -329,6 +329,9 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			if container.Name == boundaryWorkerContainerName {
 				log.Info("updating worker resources on statefulset")
 				foundSS.Spec.Template.Spec.Containers[idx].Resources = *desiredResources
+				annotations := make(map[string]string)
+				annotations[resourcesAnnotation] = desiredResourcesHash
+				foundSS.Annotations = annotations
 			}
 		}
 
@@ -336,6 +339,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+		log.Info("updated worker resources on statefulset")
 		return ctrl.Result{Requeue: true}, nil
 	}
 
