@@ -301,7 +301,7 @@ func (r *BoundaryPKIWorkerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		r.rolloutStatefulSet(ctx, *managedSS)
 		log.Info("completed cm reconciliation block")
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
 	// Update on change of replicas
