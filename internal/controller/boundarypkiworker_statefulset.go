@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	workersv1alpha1 "github.com/benemon/boundary-worker-operator/api/v1alpha1"
@@ -128,7 +129,9 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 								MountPath: "/opt/boundary/data/",
 							},
 						},
-						Resources: *resources,
+						Resources:      *resources,
+						LivenessProbe:  buildProbe(5, 1, 15),
+						ReadinessProbe: buildProbe(5, 1, 15),
 					}},
 				},
 			},
@@ -141,6 +144,25 @@ func (r *BoundaryPKIWorkerReconciler) statefulsetForBoundaryPKIWorker(
 		return nil, err
 	}
 	return ss, nil
+}
+
+func buildProbe(initialDelay int32, timeoutSeconds int32, periodSeconds int32) *corev1.Probe {
+	lp := &corev1.Probe{
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path:   "/health",
+				Port:   intstr.FromInt(9203),
+				Scheme: corev1.URISchemeHTTP,
+			},
+		},
+		InitialDelaySeconds: initialDelay,
+		TimeoutSeconds:      timeoutSeconds,
+		PeriodSeconds:       periodSeconds,
+		SuccessThreshold:    1,
+		FailureThreshold:    3,
+	}
+
+	return lp
 }
 
 func resourceRequirementsBoundaryPKIWorker(boundaryPkiWorker *workersv1alpha1.BoundaryPKIWorker) (*corev1.ResourceRequirements, string) {
